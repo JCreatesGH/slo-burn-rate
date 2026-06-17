@@ -31,6 +31,33 @@ decision.tier    # AlertTier.PAGE
 decision.reason  # "1h & 5m burn >= 14.4x"
 ```
 
+Derive thresholds (and see where the standard table comes from):
+
+```python
+from burnrate import burn_rate_threshold, remaining_budget
+
+burn_rate_threshold(0.02, alert_window_hours=1)   # 14.4  → "2% of budget in 1h"
+remaining_budget(0.25)                            # 0.75  → 75% of the budget left
+```
+
+`evaluate_policy(..., windows=my_windows)` accepts a custom window table.
+
+## CLI
+
+Installing the package adds a `burnrate` command (exits `1` when over budget, so it can gate CI):
+
+```bash
+$ burnrate --target 0.999 --error-rate 0.015 --window-hours 1
+SLO target:         99.900%
+error budget:       0.001000
+observed error:     0.015000
+burn rate:          15.00x   (OVER budget)
+time to exhaustion: 48.0h
+budget consumed:    2.08% (over 1h)
+```
+
+Add `--json` for machine-readable output.
+
 ## Why multi-window
 
 A single-window alert either fires too late (long window) or too noisily (short window). The standard fix pairs them: the **long window** confirms the burn is real, and the **short window** confirms it's *still happening* — so you don't get paged for an incident that already recovered.
@@ -47,7 +74,7 @@ A single-window alert either fires too late (long window) or too noisily (short 
 ## Development
 
 ```bash
-python -m pytest -q   # 11 tests
+pip install -e .[dev] && python -m pytest -q   # 19 tests
 ```
 
 ## License

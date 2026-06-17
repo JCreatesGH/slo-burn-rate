@@ -1,6 +1,9 @@
 import math
 import pytest
-from burnrate import error_budget, burn_rate, budget_consumed, time_to_exhaustion, Budget
+from burnrate import (
+    error_budget, burn_rate, budget_consumed, time_to_exhaustion,
+    burn_rate_threshold, remaining_budget, Budget, WINDOWS,
+)
 
 
 def test_error_budget():
@@ -35,3 +38,22 @@ def test_budget_dataclass():
     b = Budget(target=0.995)
     assert b.budget == pytest.approx(0.005)
     assert b.burn_rate(0.05) == pytest.approx(10.0)
+
+
+def test_burn_rate_threshold_inverts_budget_consumed():
+    # 2% of the budget in 1h over a 30d window is the canonical 14.4x.
+    assert burn_rate_threshold(0.02, 1, 30) == pytest.approx(14.4)
+    with pytest.raises(ValueError):
+        burn_rate_threshold(0.02, 0)
+
+
+def test_window_thresholds_match_the_formula():
+    # The standard WINDOWS table must be derivable from budget_pct over long_h.
+    for w in WINDOWS:
+        derived = burn_rate_threshold(w["budget_pct"] / 100.0, w["long_h"], 30)
+        assert derived == pytest.approx(w["threshold"], rel=1e-6)
+
+
+def test_remaining_budget():
+    assert remaining_budget(0.25) == pytest.approx(0.75)
+    assert remaining_budget(1.5) == 0.0   # clamped, never negative

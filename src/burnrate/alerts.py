@@ -39,11 +39,12 @@ def multi_window_alert(error_rate_long: float, error_rate_short: float, target: 
     return bl >= threshold and bs >= threshold
 
 
-def evaluate_policy(target: float, error_rates: Dict[float, float]) -> Decision:
+def evaluate_policy(target: float, error_rates: Dict[float, float],
+                    windows: Optional[List[dict]] = None) -> Decision:
     """error_rates maps window_hours -> observed error rate. Returns the most
-    severe alert that fires across the standard window pairs."""
+    severe alert that fires across the window pairs (defaults to the standard WINDOWS)."""
     best: Optional[Decision] = None
-    for w in WINDOWS:
+    for w in (windows if windows is not None else WINDOWS):
         long_h, short_h = w["long_h"], w["short_h"]
         if long_h not in error_rates or short_h not in error_rates:
             continue

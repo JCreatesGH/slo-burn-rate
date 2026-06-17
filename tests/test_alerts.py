@@ -38,3 +38,12 @@ def test_page_outranks_ticket():
 def test_window_table_shape():
     assert len(WINDOWS) == 4
     assert WINDOWS[0]["threshold"] == 14.4
+
+
+def test_evaluate_policy_accepts_custom_windows():
+    custom = [{"long_h": 2, "short_h": 0.25, "threshold": 5.0, "tier": AlertTier.PAGE, "budget_pct": 1.0}]
+    er = 0.001 * 6
+    d = evaluate_policy(0.999, {2: er, 0.25: er}, windows=custom)
+    assert d.fired and d.tier == AlertTier.PAGE
+    # The standard windows are not consulted when a custom set is passed.
+    assert evaluate_policy(0.999, {1: er, 5 / 60: er}, windows=custom).fired is False

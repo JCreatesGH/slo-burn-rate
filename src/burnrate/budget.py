@@ -38,6 +38,22 @@ def time_to_exhaustion(error_rate: float, target: float, slo_window_days: float 
     return total_hours / br
 
 
+def burn_rate_threshold(budget_fraction: float, alert_window_hours: float,
+                        slo_window_days: float = 30) -> float:
+    """Burn rate at which `budget_fraction` of the total budget is consumed within
+    `alert_window_hours` — the inverse of `budget_consumed`, and the formula that
+    derives the standard thresholds (e.g. 2% in 1h over 30d -> 14.4x)."""
+    if alert_window_hours <= 0:
+        raise ValueError("alert_window_hours must be positive")
+    total_hours = slo_window_days * 24
+    return budget_fraction * total_hours / alert_window_hours
+
+
+def remaining_budget(consumed_fraction: float) -> float:
+    """Fraction of the error budget still available, clamped to [0, 1]."""
+    return max(0.0, 1.0 - consumed_fraction)
+
+
 @dataclass
 class Budget:
     target: float

@@ -12,6 +12,12 @@ requires-python = ">=3.8"
 license = { text = "MIT" }
 keywords = ["slo", "sre", "error-budget", "burn-rate", "alerting", "observability"]
 
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+burnrate = "burnrate.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
