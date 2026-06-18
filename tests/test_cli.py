@@ -29,3 +29,25 @@ def test_cli_invalid_target(capsys):
     code = main(["--target", "1.0", "--error-rate", "0.01"])
     assert code == 2
     assert "error" in capsys.readouterr().err
+
+
+def test_cli_requires_error_rate_without_rules(capsys):
+    code = main(["--target", "0.999"])
+    assert code == 2
+    assert "--error-rate is required" in capsys.readouterr().err
+
+
+def test_cli_rules_emits_yaml(capsys):
+    code = main(["--target", "0.999", "--rules", "--name", "Checkout", "--label", "team=core"])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert out.startswith("groups:")
+    assert "CheckoutErrorBudgetBurnPage" in out and "severity: " in out
+    assert "team: " in out
+
+
+def test_cli_rules_json(capsys):
+    code = main(["--target", "0.999", "--rules", "--json"])
+    data = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert data["groups"][0]["rules"]

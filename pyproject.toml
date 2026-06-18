@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "burnrate"
-version = "0.1.0"
-description = "SLO error-budget and multi-window, multi-burn-rate alerting math (Google SRE model)."
+version = "0.2.0"
+description = "SLO error-budget math, multi-window burn-rate alerting, and Prometheus rule generation (Google SRE model)."
 readme = "README.md"
 authors = [{ name = "Joshua John", email = "josh202@gmail.com" }]
 requires-python = ">=3.8"
@@ -13,7 +13,7 @@ license = { text = "MIT" }
 keywords = ["slo", "sre", "error-budget", "burn-rate", "alerting", "observability"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "pyyaml>=6"]   # pyyaml only used by tests to validate emitted YAML
 
 [project.scripts]
 burnrate = "burnrate.cli:main"

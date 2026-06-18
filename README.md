@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-The math behind good SLO alerting: error budgets, burn rates, time-to-exhaustion, and **multi-window multi-burn-rate** alert decisions following the Google SRE Workbook. Zero dependencies, works with metrics from Prometheus, Datadog, Dynatrace, or anywhere.
+The math behind good SLO alerting: error budgets, burn rates, time-to-exhaustion, **multi-window multi-burn-rate** alert decisions following the Google SRE Workbook — and **generation of the deployable Prometheus alerting rules** themselves. Zero runtime dependencies, works with metrics from Prometheus, Datadog, Dynatrace, or anywhere.
 
 ![screenshot](assets/screenshot.png)
 
@@ -71,10 +71,44 @@ A single-window alert either fires too late (long window) or too noisily (short 
 
 `evaluate_policy` returns the most severe alert that fires across all pairs.
 
+## Generate Prometheus rules
+
+The payoff: turn an SLO into the alerting rules you actually deploy. One alert per tier, OR-ing every window pair (long **and** short must both exceed the burn threshold), with the threshold pre-multiplied by the error budget.
+
+```bash
+burnrate --target 0.999 --rules --name Checkout \
+  --error-query 'sum(rate(http_requests_total{code=~"5.."}[{window}])) / sum(rate(http_requests_total[{window}]))' \
+  --label team=core > checkout-slo.rules.yml
+```
+
+```yaml
+groups:
+  - name: "Checkout-slo-burn-rate"
+    rules:
+      - alert: "CheckoutErrorBudgetBurnPage"
+        expr: |-
+            (sum(rate(http_requests_total{code=~"5.."}[1h])) / … > 0.0144 and … [5m] … > 0.0144)
+            or
+            (… [6h] … > 0.006 and … [30m] … > 0.006)
+        labels: { severity: "page", slo: "Checkout", team: "core" }
+        annotations: { summary: "Checkout is burning its error budget too fast (page)" }
+      - alert: "CheckoutErrorBudgetBurnTicket"  # 24h/2h @ 3× and 72h/6h @ 1×
+        ...
+```
+
+The `{window}` placeholder is substituted per pair, the YAML emitter is hand-rolled (zero runtime deps), and the same thing is available as a library:
+
+```python
+from burnrate import SLO, burn_rate_rules, to_prometheus_yaml
+
+slo = SLO("Checkout", target=0.999, error_query="...{window}...")
+print(to_prometheus_yaml(burn_rate_rules(slo)))   # also: --json for the raw rule dict
+```
+
 ## Development
 
 ```bash
-pip install -e .[dev] && python -m pytest -q   # 19 tests
+pip install -e .[dev] && python -m pytest -q   # 28 tests
 ```
 
 ## License
