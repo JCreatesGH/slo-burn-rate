@@ -62,3 +62,31 @@ def test_emitted_yaml_parses_and_matches():
     assert page["labels"]["severity"] == "page"
     assert page["labels"]["team"] == "core"
     assert page["annotations"]["summary"].startswith("Checkout is burning")
+
+
+def test_recording_rules_precompute_each_window():
+    doc = burn_rate_rules(SLO("Checkout", 0.999, QUERY), record=True)
+    rules = doc["groups"][0]["rules"]
+    recs = [r for r in rules if "record" in r]
+    names = {r["record"] for r in recs}
+    # one recording rule per distinct window, named like Sloth
+    assert "Checkout:sli_error:ratio_rate1h" in names
+    assert "Checkout:sli_error:ratio_rate5m" in names
+    # the inlined query lives only in the recording rules now
+    assert any("http_requests_total" in r["expr"] for r in recs)
+    # alerts reference the recorded metric, not the raw query
+    alerts = [r for r in rules if "alert" in r]
+    page = next(r for r in alerts if r["alert"].endswith("Page"))
+    assert "Checkout:sli_error:ratio_rate1h" in page["expr"]
+    assert "http_requests_total" not in page["expr"]
+    # recording rules come before the alerts (Prometheus evaluates in order)
+    assert "record" in rules[0]
+
+
+def test_recording_rule_yaml_is_valid_and_metric_name_sanitized():
+    yaml = pytest.importorskip("yaml")
+    doc = burn_rate_rules(SLO("my-checkout svc", 0.999, QUERY), record=True)
+    parsed = yaml.safe_load(to_prometheus_yaml(doc))
+    recs = [r for r in parsed["groups"][0]["rules"] if "record" in r]
+    # name sanitized to a valid Prometheus metric segment
+    assert recs and all(r["record"].startswith("my_checkout_svc:sli_error:ratio_rate") for r in recs)

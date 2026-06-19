@@ -6,7 +6,9 @@ import math
 import sys
 from typing import Dict, List, Optional
 
-from .budget import error_budget, burn_rate, budget_consumed, time_to_exhaustion
+from .budget import (
+    error_budget, burn_rate, budget_consumed, time_to_exhaustion, error_budget_minutes,
+)
 from .rules import SLO, burn_rate_rules, to_prometheus_yaml
 
 DEFAULT_ERROR_QUERY = (
@@ -38,6 +40,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     # rule-generation mode
     parser.add_argument("--rules", action="store_true",
                         help="emit deployable Prometheus burn-rate alerting rules")
+    parser.add_argument("--record", action="store_true",
+                        help="with --rules: emit recording rules and reference them from alerts")
     parser.add_argument("--name", default="MySLO", help="SLO name used in alert names/labels")
     parser.add_argument("--error-query", default=DEFAULT_ERROR_QUERY,
                         help="error-ratio PromQL with a {window} placeholder")
@@ -52,7 +56,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             labels = _parse_labels(args.label)
             slo = SLO(name=args.name, target=args.target, error_query=args.error_query,
                       labels=labels, alert_for=args.alert_for)
-            doc = burn_rate_rules(slo)
+            doc = burn_rate_rules(slo, record=args.record)
         except ValueError as e:
             print(f"error: {e}", file=sys.stderr)
             return 2
@@ -75,10 +79,13 @@ def main(argv: Optional[List[str]] = None) -> int:
                 if args.window_hours else None)
     over = br >= 1.0
 
+    downtime_min = error_budget_minutes(args.target, args.slo_days)
+
     if args.json:
         print(json.dumps({
             "target": args.target,
             "error_budget": budget,
+            "error_budget_minutes": downtime_min,
             "error_rate": args.error_rate,
             "burn_rate": br,
             "time_to_exhaustion_hours": None if math.isinf(tte) else tte,
@@ -88,6 +95,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     else:
         print(f"SLO target:         {args.target * 100:.3f}%")
         print(f"error budget:       {budget:.6f}")
+        print(f"allowed downtime:   {downtime_min:.1f} min / {args.slo_days:g}d")
         print(f"observed error:     {args.error_rate:.6f}")
         print(f"burn rate:          {br:.2f}x   ({'OVER budget' if over else 'within budget'})")
         print(f"time to exhaustion: {'∞' if math.isinf(tte) else f'{tte:.1f}h'}")

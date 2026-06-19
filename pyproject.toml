@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "burnrate"
-version = "0.2.0"
+version = "0.3.0"
 description = "SLO error-budget math, multi-window burn-rate alerting, and Prometheus rule generation (Google SRE model)."
 readme = "README.md"
 authors = [{ name = "Joshua John", email = "josh202@gmail.com" }]

@@ -54,6 +54,19 @@ def remaining_budget(consumed_fraction: float) -> float:
     return max(0.0, 1.0 - consumed_fraction)
 
 
+def error_budget_minutes(target: float, slo_window_days: float = 30) -> float:
+    """Allowed downtime in minutes over the SLO window — the number teams actually
+    quote: 99.9% over 30 days -> 43.2 minutes; 99.99% -> 4.32 minutes."""
+    return error_budget(target) * slo_window_days * 24 * 60
+
+
+def error_budget_requests(target: float, total_requests: float) -> float:
+    """Allowed failed requests out of `total_requests` for a request-based SLO."""
+    if total_requests < 0:
+        raise ValueError("total_requests must be non-negative")
+    return error_budget(target) * total_requests
+
+
 @dataclass
 class Budget:
     target: float

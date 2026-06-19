@@ -2,8 +2,21 @@ import math
 import pytest
 from burnrate import (
     error_budget, burn_rate, budget_consumed, time_to_exhaustion,
-    burn_rate_threshold, remaining_budget, Budget, WINDOWS,
+    burn_rate_threshold, remaining_budget, error_budget_minutes, error_budget_requests,
+    Budget, WINDOWS,
 )
+
+
+def test_error_budget_minutes_matches_the_famous_numbers():
+    assert error_budget_minutes(0.999) == pytest.approx(43.2)     # 99.9% / 30d
+    assert error_budget_minutes(0.9999) == pytest.approx(4.32)    # 99.99%
+    assert error_budget_minutes(0.999, slo_window_days=7) == pytest.approx(10.08)
+
+
+def test_error_budget_requests():
+    assert error_budget_requests(0.999, 1_000_000) == pytest.approx(1000)
+    with pytest.raises(ValueError):
+        error_budget_requests(0.999, -1)
 
 
 def test_error_budget():

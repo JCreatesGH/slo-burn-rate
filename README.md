@@ -105,10 +105,41 @@ slo = SLO("Checkout", target=0.999, error_query="...{window}...")
 print(to_prometheus_yaml(burn_rate_rules(slo)))   # also: --json for the raw rule dict
 ```
 
+### Recording rules (`--record`)
+
+The production pattern used by Sloth/Pyrra: precompute each window's error ratio into a
+`<name>:sli_error:ratio_rate<window>` **recording rule** and have the alerts reference that
+metric. Cheaper to evaluate than re-running the full query in every alert, and the recorded
+series is easy to graph. Pass `--record` (or `burn_rate_rules(slo, record=True)`):
+
+```yaml
+- record: "Checkout:sli_error:ratio_rate1h"
+  expr: "sum(rate(http_requests_total{code=~\"5..\"}[1h])) / sum(rate(http_requests_total[1h]))"
+- alert: "CheckoutErrorBudgetBurnPage"
+  expr: |-
+      (Checkout:sli_error:ratio_rate1h > 0.0144 and Checkout:sli_error:ratio_rate5m > 0.0144)
+      or …
+```
+
+Recording rules are emitted first so Prometheus has the metric before the alerts evaluate, and
+the SLO name is sanitized to a valid metric name.
+
+## How much downtime is that?
+
+```python
+from burnrate import error_budget_minutes, error_budget_requests
+
+error_budget_minutes(0.999)              # 43.2   → 99.9% allows 43.2 min/30d
+error_budget_minutes(0.9999)             # 4.32   → 99.99%
+error_budget_requests(0.999, 1_000_000)  # 1000   → allowed failures per million requests
+```
+
+The CLI report shows it inline (`allowed downtime: 43.2 min / 30d`).
+
 ## Development
 
 ```bash
-pip install -e .[dev] && python -m pytest -q   # 28 tests
+pip install -e .[dev] && python -m pytest -q   # 32 tests
 ```
 
 ## License

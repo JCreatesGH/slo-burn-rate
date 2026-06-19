@@ -3,6 +3,18 @@
 All notable changes are documented here, following
 [Keep a Changelog](https://keepachangelog.com/) and [SemVer](https://semver.org/).
 
+## [0.3.0]
+
+### Added
+- **Recording-rule generation** — `burn_rate_rules(slo, record=True)` (CLI `--record`) emits a
+  `<name>:sli_error:ratio_rate<window>` recording rule per window and references it from the
+  alerts, the production pattern used by Sloth/Pyrra. Recording rules are emitted first so the
+  metric exists before alerts evaluate, and the SLO name is sanitized to a valid metric name.
+  `to_prometheus_yaml` now serializes `record:` rules.
+- **`error_budget_minutes(target, slo_window_days=30)`** — allowed downtime in minutes
+  (99.9% → 43.2 min/30d), and **`error_budget_requests(target, total)`** for request-based SLOs.
+  The CLI report now shows `allowed downtime` and `--json` includes `error_budget_minutes`.
+
 ## [0.2.0]
 
 ### Added
